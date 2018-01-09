@@ -10,7 +10,7 @@ Codes: C - connected, S - static, R - RIP, M - mobile, B - BGP
 Gateway of last resort is not set
 
      34.0.0.0/24 is subnetted, 1 subnets
-O       34.1.1.0 [110/66] via 12.1.1.2, 00:47:24, FastEthernet1/0
+R       34.1.1.0 [110/66] via 12.1.1.2, 00:47:24, FastEthernet1/0
      1.0.0.0/24 is subnetted, 1 subnets
 C       1.1.1.0 is directly connected, Loopback0
      2.0.0.0/32 is subnetted, 1 subnets
@@ -25,58 +25,3 @@ O       24.1.1.0 [110/2] via 12.1.1.2, 00:47:26, FastEthernet1/0
 C       12.1.1.0 is directly connected, FastEthernet1/0
      13.0.0.0/24 is subnetted, 1 subnets
 C       13.1.1.0 is directly connected, Serial0/0
-
-R1#show ip route
-Codes: C - connected, S - static, R - RIP, M - mobile, B - BGP
-       D - EIGRP, EX - EIGRP external, O - OSPF, IA - OSPF inter area 
-       N1 - OSPF NSSA external type 1, N2 - OSPF NSSA external type 2
-       E1 - OSPF external type 1, E2 - OSPF external type 2
-       i - IS-IS, su - IS-IS summary, L1 - IS-IS level-1, L2 - IS-IS level-2
-       ia - IS-IS inter area, * - candidate default, U - per-user static route
-       o - ODR, P - periodic downloaded static route
-
-Gateway of last resort is not set
-
-R    192.168.1.0/24 [120/1] via 192.168.2.66, 00:00:22, FastEthernet1/1
-     192.168.2.0/24 is variably subnetted, 4 subnets, 2 masks
-R       192.168.2.96/28 [120/1] via 192.168.2.67, 00:00:08, FastEthernet1/1
-C       192.168.2.64/28 is directly connected, FastEthernet1/1
-R       192.168.2.0/24 [120/2] via 192.168.2.66, 00:00:22, FastEthernet1/1
-R       192.168.2.128/28 [120/1] via 192.168.2.67, 00:00:08, FastEthernet1/1
-     192.168.3.0/27 is subnetted, 1 subnets
-C       192.168.3.96 is directly connected, FastEthernet1/0
-
-R4#show ip route
-Codes: C - connected, S - static, R - RIP, M - mobile, B - BGP
-       D - EIGRP, EX - EIGRP external, O - OSPF, IA - OSPF inter area 
-       N1 - OSPF NSSA external type 1, N2 - OSPF NSSA external type 2
-       E1 - OSPF external type 1, E2 - OSPF external type 2
-       i - IS-IS, su - IS-IS summary, L1 - IS-IS level-1, L2 - IS-IS level-2
-       ia - IS-IS inter area, * - candidate default, U - per-user static route
-       o - ODR, P - periodic downloaded static route
-
-Gateway of last resort is not set
-
-     192.168.1.0/24 is variably subnetted, 2 subnets, 2 masks
-R       192.168.1.176/28 [120/1] via 192.168.1.153, 00:00:07, Serial0/0
-C       192.168.1.152/30 is directly connected, Serial0/0
-     192.168.2.0/24 is variably subnetted, 4 subnets, 2 masks
-R       192.168.2.96/28 [120/1] via 192.168.2.129, 00:00:03, Serial0/1
-R       192.168.2.64/28 [120/1] via 192.168.2.129, 00:00:03, Serial0/1
-R       192.168.2.0/24 [120/1] via 192.168.1.153, 00:00:07, Serial0/0
-C       192.168.2.128/28 is directly connected, Serial0/1
-     192.168.3.0/27 is subnetted, 1 subnets
-C       192.168.3.64 is directly connected, FastEthernet1/0
-
-R1#show ip route
-
-R    192.168.1.0/24 [120/1] via 192.168.2.66, 00:00:15, FastEthernet1/1
-     192.168.2.0/24 is variably subnetted, 4 subnets, 2 masks
-R       192.168.2.96/28 [120/1] via 192.168.2.67, 00:00:07, FastEthernet1/1
-C       192.168.2.64/28 is directly connected, FastEthernet1/1
-R       192.168.2.0/24 [120/3] via 192.168.2.67, 00:00:07, FastEthernet1/1
-R       192.168.2.128/28 [120/1] via 192.168.2.67, 00:00:07, FastEthernet1/1
-     192.168.3.0/24 is variably subnetted, 2 subnets, 2 masks
-C       192.168.3.96/27 is directly connected, FastEthernet1/0
-R       192.168.3.0/24 [120/2] via 192.168.2.67, 00:00:07, FastEthernet1/1
-                       [120/2] via 192.168.2.66, 00:00:15, FastEthernet1/1

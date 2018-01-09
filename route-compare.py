@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Python 3.6.3
 # Copyright by Neil Judson
-# Revision: 0.1 Date: 2018/01/08 20:00:00
+# Revision: 0.2 Date: 2018/01/09 15:30:00
 
 # import sys
 import re
@@ -78,56 +78,47 @@ class RouteCompare:
             'AD/Metric': r'\[\d*/\d*\]',
             'Interface': r'((FastEthernet|Ethernet|Serial)\d*/\d*)|null0'
         }
-        for i in dic_route_message_reg:
-            route_message = re.search(dic_route_message_reg[i], s)
+
+        for j in dic_route_message_reg:
+            route_message = re.search(dic_route_message_reg[j], s)
             if route_message:
-                dic_route_detail.update({i: route_message.group()})
+                dic_route_detail.update({j: route_message.group()})
             else:
-                dic_route_detail.update({i: ''})
-        next_hop_0 = re.search(r'via ' + self.s_ip_reg, s)
-        if next_hop_0:
-            next_hop = re.search(self.ip_reg, next_hop_0.group())
+                dic_route_detail.update({j: ''})
+        next_hop0 = re.search(r'via ' + self.s_ip_reg, s)
+        if next_hop0:
+            next_hop = re.search(self.ip_reg, next_hop0.group())
             if next_hop:
                 dic_route_detail.update({'NextHop': next_hop.group()})
             else:
                 dic_route_detail.update({'NextHop': ''})
         return dic_route_detail
-        # route_detail = ''
-        # dic_route_message_reg = {
-        #     'Type':         r'^[a-zA-Z]*',
-        #     'AD/Metric':    r'\[\d*/\d*\]',
-        #     'Interface':    r'((FastEthernet|Ethernet|Serial)\d*/\d*)|null0'
-        # }
-        # for i in dic_route_message_reg:
-        #     route_message = re.search(dic_route_message_reg[i], s)
-        #     if route_message:
-        #         route_detail = route_detail + i + ':' + route_message.group() + ' | '
-        #     else:
-        #         route_detail = route_detail + i + ':' + ' | '
-        # next_hop_0 = re.search(re.compile(r'via ' + self.s_ip_reg), s)
-        # if next_hop_0:
-        #     next_hop = re.search(self.ip_reg, next_hop_0.group())
-        #     if next_hop:
-        #         route_detail = route_detail + 'NextHop:' + next_hop.group()
-        #     else:
-        #         route_detail = route_detail + 'NextHop:'
-        # # interface = re.search(r'((FastEthernet|Ethernet|Serial)\d*\/\d*)|null0', s)
-        # # if interface:
-        # #     route_detail = route_detail + 'Interface:' + interface.group() + ' | '
-        # # else:
-        # #     route_detail = route_detail + 'Interface:' + ' | '
-        # return route_detail
 
     def compare_route_table(self, dic_table_1, dic_table_2):
-        return dic_table_1 == dic_table_2
+        table_1_keys = dic_table_1.keys()
+        table_2_keys = dic_table_2.keys()
+        set_table_1_2_keys = table_1_keys - (table_1_keys - table_2_keys)  # both in table_1 and table_2
+        for j in set_table_1_2_keys:
+            # delete the same item
+            if dic_table_1[j] == dic_table_2[j]:
+                dic_table_1.pop(j)
+                dic_table_2.pop(j)
+        for j in dic_table_1:
+            print('%-18s' % j + ' ', dic_table_1[j])
+        print()
+        for j in dic_table_2:
+            print('%-18s' % j + ' ', dic_table_2[j])
 
 
 if __name__ == '__main__':
     rc = RouteCompare()
     dic_route_table_1 = rc.read_route_file('R1.log')
-    for j in dic_route_table_1:
-        print('%-18s' % j + ' ', dic_route_table_1[j])
-    print([(k,  dic_route_table_1[k]) for k in sorted(dic_route_table_1.keys())])  # sort
+    # for i in dic_route_table_1:
+    #     print('%-18s' % i + ' ', dic_route_table_1[i])
+    # print([(k,  dic_route_table_1[k]) for k in sorted(dic_route_table_1.keys())])  # sort
     dic_route_table_2 = rc.read_route_file('R1.log')
-    result = rc.compare_route_table(dic_route_table_1, dic_route_table_2)
-    print(result)
+    if dic_route_table_1 == dic_route_table_2:
+        print('These two route tables are the same.')
+    else:
+        print('These two route tables are different.')
+        rc.compare_route_table(dic_route_table_1, dic_route_table_2)
