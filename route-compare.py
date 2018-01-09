@@ -14,33 +14,18 @@ class RouteCompare:
     ip_reg = re.compile(s_ip_reg)
 
     def read_route_file(self, s_file_name):
-        f = None
-        encode_type = None
+        encode_type = ''
 
-        try:
-            f = open(s_file_name, 'rb')
-        except FileNotFoundError:
-            print('Can not find file: ' + s_file_name)
-            exit(-1)
-        try:
+        with open(s_file_name, 'rb') as f:
             s = f.read()
             encode_type = chardet.detect(s)['encoding']
-        except Exception as e1:
-            print('ERROR1: ', e1)
-            exit(-1)
-        finally:
-            f.close()
 
-        try:
-            f = open(s_file_name, encoding=encode_type)
-        except FileNotFoundError:
-            print('Can not find file: ' + s_file_name)
-            exit(-1)
-        try:
-            s = f.readline()
+        with open(s_file_name, encoding=encode_type) as f:
             s_net_ip = '0.0.0.0/32'
             s_net_mask = '/32'
             dic_route_table = {}
+
+            s = f.readline()
             while s:
                 ip = re.search(self.ip_reg, s)
                 if ip:
@@ -65,11 +50,6 @@ class RouteCompare:
                         dic_route_table.update({s_net_ip: dic_route_detail})
                 s = f.readline()
             return dic_route_table
-        except Exception as e2:
-            print('ERROR1: ', e2)
-            exit(-1)
-        finally:
-            f.close()
 
     def get_route_detail(self, s):
         dic_route_detail = {}
@@ -116,7 +96,7 @@ if __name__ == '__main__':
     # for i in dic_route_table_1:
     #     print('%-18s' % i + ' ', dic_route_table_1[i])
     # print([(k,  dic_route_table_1[k]) for k in sorted(dic_route_table_1.keys())])  # sort
-    dic_route_table_2 = rc.read_route_file('R1.log')
+    dic_route_table_2 = rc.read_route_file('R2.log')
     if dic_route_table_1 == dic_route_table_2:
         print('These two route tables are the same.')
     else:
