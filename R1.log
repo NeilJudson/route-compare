@@ -20,7 +20,7 @@ O       3.3.3.3 [110/65] via 13.1.1.2, 00:47:24, Serial0/0
      4.0.0.0/32 is subnetted, 1 subnets
 O       4.4.4.4 [110/3] via 12.1.1.2, 00:47:24, FastEthernet1/0
      24.0.0.0/24 is subnetted, 1 subnets
-O       24.1.1.0 [110/2] via 12.1.1.2, 00:47:26, FastEthernet1/0
+O       24.1.1.0 [110/2] via 12.1.1.2, 00:47:26, Null0
      12.0.0.0/24 is subnetted, 1 subnets
 C       12.1.1.0 is directly connected, FastEthernet1/0
 

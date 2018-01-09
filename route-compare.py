@@ -56,22 +56,22 @@ class RouteCompare:
         dic_route_message_reg = {
             'Type': r'^[a-zA-Z]*',
             'AD/Metric': r'\[\d*/\d*\]',
-            'Interface': r'((FastEthernet|Ethernet|Serial)\d*/\d*)|null0'
+            'Interface': r'((FastEthernet|Ethernet|Serial)\d*/[\d.]*)|Vlan\d*|Null0'
         }
 
         for j in dic_route_message_reg:
             route_message = re.search(dic_route_message_reg[j], s)
             if route_message:
                 dic_route_detail.update({j: route_message.group()})
-            else:
-                dic_route_detail.update({j: ''})
+            # else:
+            #     dic_route_detail.update({j: ''})
         next_hop0 = re.search(r'via ' + self.s_ip_reg, s)
         if next_hop0:
             next_hop = re.search(self.ip_reg, next_hop0.group())
             if next_hop:
                 dic_route_detail.update({'NextHop': next_hop.group()})
-            else:
-                dic_route_detail.update({'NextHop': ''})
+            # else:
+            #     dic_route_detail.update({'NextHop': ''})
         return dic_route_detail
 
     def compare_route_table(self, dic_table_1, dic_table_2):
