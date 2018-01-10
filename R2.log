@@ -25,3 +25,4 @@ O       24.1.1.0 [110/2] via 12.1.1.2, 00:47:26, Vlan1
 C       12.1.1.0 is directly connected, FastEthernet1/0
      13.0.0.0/24 is subnetted, 1 subnets
 C       13.1.1.0 is directly connected, Serial0/0
+R       192.168.3.0/24 [120/2] via 192.168.2.129, 00:00:14, Serial0/1

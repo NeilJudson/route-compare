@@ -14,16 +14,15 @@ class RouteCompare:
     ip_reg = re.compile(s_ip_reg)
 
     def read_route_file(self, s_file_name):
-        encode_type = ''
-
         with open(s_file_name, 'rb') as f:
             s = f.read()
             encode_type = chardet.detect(s)['encoding']
 
+        dic_route_table = {}
+
         with open(s_file_name, encoding=encode_type) as f:
             s_net_ip = '0.0.0.0/32'
             s_net_mask = '/32'
-            dic_route_table = {}
 
             s = f.readline()
             while s:
@@ -49,7 +48,7 @@ class RouteCompare:
                         dic_route_detail = self.get_route_detail(s)  # analyse route entry
                         dic_route_table.update({s_net_ip: dic_route_detail})
                 s = f.readline()
-            return dic_route_table
+        return dic_route_table
 
     def get_route_detail(self, s):
         dic_route_detail = {}
@@ -75,19 +74,17 @@ class RouteCompare:
         return dic_route_detail
 
     def compare_route_table(self, dic_table_1, dic_table_2):
-        table_1_keys = dic_table_1.keys()
-        table_2_keys = dic_table_2.keys()
-        set_table_1_2_keys = table_1_keys - (table_1_keys - table_2_keys)  # both in table_1 and table_2
-        for j in set_table_1_2_keys:
+        table_keys_1 = dic_table_1.keys()
+        table_keys_2 = dic_table_2.keys()
+        set_table_keys_1_mul_2 = table_keys_1 - (table_keys_1 - table_keys_2)  # keys of table_1 and table_2
+        set_table_keys_1_and_2 = table_keys_1 | table_keys_2           # keys of table_1 or table_2
+        for j in set_table_keys_1_mul_2:
             # delete the same item
             if dic_table_1[j] == dic_table_2[j]:
-                dic_table_1.pop(j)
-                dic_table_2.pop(j)
-        for j in dic_table_1:
-            print('%-18s' % j + ' ', dic_table_1[j])
-        print()
-        for j in dic_table_2:
-            print('%-18s' % j + ' ', dic_table_2[j])
+                # dic_table_1.pop(j)
+                # dic_table_2.pop(j)
+                set_table_keys_1_and_2.remove(j)
+        return set_table_keys_1_and_2
 
 
 if __name__ == '__main__':
@@ -101,4 +98,9 @@ if __name__ == '__main__':
         print('These two route tables are the same.')
     else:
         print('These two route tables are different.')
-        rc.compare_route_table(dic_route_table_1, dic_route_table_2)
+        set_result_keys = rc.compare_route_table(dic_route_table_1, dic_route_table_2)
+        print('These are %d different routes.' % len(set_result_keys))
+        for i in sorted(set_result_keys):
+            print(150*'-')
+            print('%-18s ' % i, (i in dic_route_table_1 and dic_route_table_1[i] or ''))
+            print(19*' ', (i in dic_route_table_2 and dic_route_table_2[i] or ''))
