@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Python 3.6.3
 # Copyright by Neil Judson
-# Revision: 0.2 Date: 2018/01/09 15:30:00
+# Revision: 0.3 Date: 2018/01/09 20:00:00
 
 # import sys
 import re
