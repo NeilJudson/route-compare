@@ -73,11 +73,12 @@ class RouteCompare:
             #     dic_route_detail.update({'NextHop': ''})
         return dic_route_detail
 
-    def compare_route_table(self, dic_table_1, dic_table_2):
+    @staticmethod
+    def compare_route_table(dic_table_1, dic_table_2):
         table_keys_1 = dic_table_1.keys()
         table_keys_2 = dic_table_2.keys()
         set_table_keys_1_mul_2 = table_keys_1 - (table_keys_1 - table_keys_2)  # keys of table_1 and table_2
-        set_table_keys_1_and_2 = table_keys_1 | table_keys_2           # keys of table_1 or table_2
+        set_table_keys_1_and_2 = table_keys_1 | table_keys_2    # keys of table_1 or table_2
         for j in set_table_keys_1_mul_2:
             # delete the same item
             if dic_table_1[j] == dic_table_2[j]:
