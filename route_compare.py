@@ -36,13 +36,16 @@ class RouteCompare:
                     elif re.search('^ *\[\d*/\d*\]', s):
                         # multipath route
                         dic_route_detail = self.get_route_detail(s)  # analyse route entry
-                        dic_route_detail.update({'Type': dic_route_table[s_net_ip][0]['Type']})
-                        dic_route_table.update({s_net_ip: dic_route_table[s_net_ip] + [dic_route_detail]})
+                        type_temp = dic_route_table[s_net_ip][0]['Type']
+                        dic_route_detail.update({'Type': type_temp})
+                        if {'Type': type_temp} == dic_route_table[s_net_ip][0]:
+                            dic_route_table.update({s_net_ip: [dic_route_detail]})
+                        else:
+                            dic_route_table.update({s_net_ip: dic_route_table[s_net_ip] + [dic_route_detail]})
                         # How to sort of list of dict?
                     else:
                         # route
-                        sub_net_mask = re.search(r'/[1-3]?\d', ip.group())
-                        if sub_net_mask:
+                        if re.search(r'/[1-3]?\d', ip.group()):
                             s_net_ip = ip.group()
                         else:
                             s_net_ip = ip.group() + s_net_mask
@@ -54,9 +57,9 @@ class RouteCompare:
     def get_route_detail(self, s):
         dic_route_detail = {}
         dic_route_message_reg = {
-            'Type': r'^[a-zA-Z]*',
+            'Type': r'^[CSRMBDOi*]([* ]{1,2}(EX|IA|N1|N2|E1|E2|su|L1|L2|ia]))?',
             'AD/Metric': r'\[\d*/\d*\]',
-            'Interface': r'((FastEthernet|Ethernet|Serial)\d*/[\d.]*)|Vlan\d*|Null0'
+            'Interface': r'((FastEthernet|Ethernet|Serial)\d*/[\d.]*)|Loopback\d*|Port-channel\d*|Vlan\d*|Null0'
         }
 
         for j in dic_route_message_reg:
