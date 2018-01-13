@@ -5,8 +5,10 @@
 # Revision: 0.6 Date: 2018/01/11 22:00:00
 
 import sys
+import os
 import re
 import chardet
+import prettytable
 
 
 class RouteCompare:
@@ -107,6 +109,35 @@ class RouteCompare:
                 print(s)
         print('\nThese are %d different routes.' % len(set_result_keys))
 
+    @staticmethod
+    def show_result_table(set_result_keys, list_file_name, list_dic_table):
+        list_keys = ['Type', 'AD/Metric', 'Interface', 'NextHop']
+        pt = prettytable.PrettyTable()
+        pt.field_names = ['Route', 'Table'] + list_keys
+        pt.align = 'l'                                          # Left align city names
+
+        with open(r'.\result.txt', 'w') as f:
+            print('These are %d different routes.' % len(set_result_keys))
+            for m in sorted(set_result_keys):
+                count1 = 0
+                for n in [0, 1]:
+                    if m in list_dic_table[n]:
+                        count2 = 0
+                        for l in list_dic_table[n][m]:
+                            row = [(count1 == 0) and m or '', (count2 == 0) and list_file_name[n] or '']
+                            for q in list_keys:
+                                row += [l.get(q) and l[q] or '']
+                            pt.add_row(row)
+                            count1 += 1
+                            count2 += 1
+                    else:
+                        pt.add_row([(count1 == 0) and m or '', list_file_name[n], '', '', '', ''])
+                        count1 += 1
+                pt.add_row(6*['-'])
+            f.write(str(pt))
+            f.write('\nThese are %d different routes.' % len(set_result_keys))
+        os.system(r'.\result.txt')
+
 
 if __name__ == '__main__':
     list_argv = ['', '']
@@ -133,4 +164,4 @@ if __name__ == '__main__':
         print('These two route tables are the same.')
     else:
         print('These two route tables are different.')
-        RouteCompare.show_result(RouteCompare.compare_route_table(list_dic_route_table), list_argv, list_dic_route_table)
+        RouteCompare.show_result_table(RouteCompare.compare_route_table(list_dic_route_table), list_argv, list_dic_route_table)
