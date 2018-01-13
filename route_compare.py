@@ -86,6 +86,8 @@ class RouteCompare:
 
     @staticmethod
     def show_result(set_result_keys, list_file_name, list_dic_table):
+        list_keys = ['Type', 'AD/Metric', 'Interface', 'NextHop']
+
         print('These are %d different routes.' % len(set_result_keys))
         for m in sorted(set_result_keys):
             print(64 * '-')
@@ -98,10 +100,8 @@ class RouteCompare:
                     j = len(list_file_name[n])
                     for l in list_dic_table[n][m]:
                         count += 1
-                        # for p, q in l.items():
-                        #     s += ' {p}:{q}'.format(p=p, q=q)
-                        for q in l.values():
-                            s += ' ' + q
+                        for q in list_keys:
+                            s += ' ' + (l.get(q) and l[q] or '')
                         if count != length:
                             s += '\n ' + j*' '
                 print(s)
