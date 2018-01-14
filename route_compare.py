@@ -2,11 +2,13 @@
 # -*- coding: utf-8 -*-
 # Python 3.6.3
 # Copyright by Neil Judson
-# Revision: 0.6 Date: 2018/01/11 22:00:00
+# Revision: 0.8 Date: 2018/01/14 22:00:00
 
 import sys
+import os
 import re
 import chardet
+import prettytable
 
 
 class RouteCompare:
@@ -36,13 +38,16 @@ class RouteCompare:
                     elif re.search('^ *\[\d*/\d*\]', s):
                         # multipath route
                         dic_route_detail = self.get_route_detail(s)  # analyse route entry
-                        dic_route_detail.update({'Type': dic_route_table[s_net_ip][0]['Type']})
-                        dic_route_table.update({s_net_ip: dic_route_table[s_net_ip] + [dic_route_detail]})
+                        type_temp = dic_route_table[s_net_ip][0]['Type']
+                        dic_route_detail.update({'Type': type_temp})
+                        if {'Type': type_temp} == dic_route_table[s_net_ip][0]:
+                            dic_route_table.update({s_net_ip: [dic_route_detail]})
+                        else:
+                            dic_route_table.update({s_net_ip: dic_route_table[s_net_ip] + [dic_route_detail]})
                         # How to sort of list of dict?
                     else:
                         # route
-                        sub_net_mask = re.search(r'/[1-3]?\d', ip.group())
-                        if sub_net_mask:
+                        if re.search(r'/[1-3]?\d', ip.group()):
                             s_net_ip = ip.group()
                         else:
                             s_net_ip = ip.group() + s_net_mask
@@ -54,9 +59,9 @@ class RouteCompare:
     def get_route_detail(self, s):
         dic_route_detail = {}
         dic_route_message_reg = {
-            'Type': r'^[a-zA-Z]*',
+            'Type': r'^[CSRMBDOi*]([* ]{1,2}(EX|IA|N1|N2|E1|E2|su|L1|L2|ia]))?',
             'AD/Metric': r'\[\d*/\d*\]',
-            'Interface': r'((FastEthernet|Ethernet|Serial)\d*/[\d.]*)|Vlan\d*|Null0'
+            'Interface': r'((FastEthernet|Ethernet|Serial)\d*/[\d.]*)|Loopback\d*|Port-channel\d*|Vlan\d*|Null0'
         }
 
         for j in dic_route_message_reg:
@@ -83,6 +88,8 @@ class RouteCompare:
 
     @staticmethod
     def show_result(set_result_keys, list_file_name, list_dic_table):
+        list_keys = ['Type', 'AD/Metric', 'Interface', 'NextHop']
+
         print('These are %d different routes.' % len(set_result_keys))
         for m in sorted(set_result_keys):
             print(64 * '-')
@@ -95,14 +102,83 @@ class RouteCompare:
                     j = len(list_file_name[n])
                     for l in list_dic_table[n][m]:
                         count += 1
-                        # for p, q in l.items():
-                        #     s += ' {p}:{q}'.format(p=p, q=q)
-                        for q in l.values():
-                            s += ' ' + q
+                        for q in list_keys:
+                            s += ' ' + (l.get(q) and l[q] or '')
                         if count != length:
                             s += '\n ' + j*' '
                 print(s)
         print('\nThese are %d different routes.' % len(set_result_keys))
+
+    @staticmethod
+    def show_result_table0(set_result_keys, list_file_name, list_dic_table):
+        '''输出结果表格上下对比'''
+        list_keys = ['Type', 'AD/Metric', 'Interface', 'NextHop']
+        pt = prettytable.PrettyTable()
+        pt.field_names = ['Route', 'Table'] + list_keys
+        pt.align = 'l'                                          # Left align city names
+        result_file_name = '.\\' + list_file_name[0] + '_vs_' + list_file_name[1] + '.txt'
+
+        with open(result_file_name, 'w') as f:
+            for m in sorted(set_result_keys):
+                count1 = 0
+                for n in [0, 1]:
+                    if m in list_dic_table[n]:
+                        count2 = 0
+                        for l in list_dic_table[n][m]:
+                            row = [(count1 == 0) and m or '', (count2 == 0) and list_file_name[n] or '']
+                            for q in list_keys:
+                                row += [l.get(q) and l[q] or '']
+                            pt.add_row(row)
+                            count1 += 1
+                            count2 += 1
+                    else:
+                        pt.add_row([(count1 == 0) and m or '', list_file_name[n], '', '', '', ''])
+                        count1 += 1
+                pt.add_row(6*['-'])
+            f.write('These are %d different routes.\n' % len(set_result_keys))
+            f.write(str(pt))
+        os.system(result_file_name)
+
+    @staticmethod
+    def show_result_table1(set_result_keys, list_file_name, list_dic_table):
+        '''输出结果表格左右对比'''
+        list_keys = ['Type', 'AD/Metric', 'Interface', 'NextHop']
+        list_keys0 = ['A Type', 'A AD/Metric', 'A Interface', 'A NextHop']
+        list_keys1 = ['B Type', 'B AD/Metric', 'B Interface', 'B NextHop']
+        pt = prettytable.PrettyTable()
+        pt.field_names = list_keys0 + [list_file_name[0] + ' Route ' + list_file_name[1]] + list_keys1
+        pt.align = 'l'                                          # Left align city names
+        result_file_name = '.\\' + list_file_name[0] + '_vs_' + list_file_name[1] + '.txt'
+
+        with open(result_file_name, 'w') as f:
+            for m in sorted(set_result_keys):
+                count1 = -1
+                row_list = []
+                if m in list_dic_table[0]:
+                    for l in list_dic_table[0][m]:
+                        count1 += 1
+                        row_list.extend([[]])
+                        for q in list_keys:
+                            row_list[count1] += [l.get(q) and l[q] or '']
+                        row_list[count1] += [(count1 == 0) and m or '']
+                count2 = -1
+                if m in list_dic_table[1]:
+                    for l in list_dic_table[1][m]:
+                        count2 += 1
+                        if count2 > count1:
+                            row_list.extend([[]])
+                            row_list[count2] = ['', '', '', '', (count2 == 0) and m or '']
+                        for q in list_keys:
+                            row_list[count2] += [l.get(q) and l[q] or '']
+                while count2 < count1:
+                    count2 += 1
+                    row_list[count2] += ['', '', '', '']
+                for j in range(0, count2+1):
+                    pt.add_row(row_list[j])
+                pt.add_row(9*['------'])
+            f.write('These are %d different routes.\n' % len(set_result_keys))
+            f.write(str(pt))
+        os.system(result_file_name)
 
 
 if __name__ == '__main__':
@@ -130,4 +206,4 @@ if __name__ == '__main__':
         print('These two route tables are the same.')
     else:
         print('These two route tables are different.')
-        RouteCompare.show_result(RouteCompare.compare_route_table(list_dic_route_table), list_argv, list_dic_route_table)
+        RouteCompare.show_result_table1(RouteCompare.compare_route_table(list_dic_route_table), list_argv, list_dic_route_table)
