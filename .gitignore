@@ -1,5 +1,5 @@
 ignore
 .idea/
-venv(x32)/
+venv(x86)/
 rc-32.bat
 *show+ip+route.txt*

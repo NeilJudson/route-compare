@@ -1,1 +1,0 @@
-.\"venv(x86)"\Scripts\python route_compare.py %1 %2
