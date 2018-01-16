@@ -1,5 +1,6 @@
 ignore
 .idea/
-venv(x86)/
+*/__pycache__/*
+venv(x86)
 rc-32.bat
 *show+ip+route.txt*
