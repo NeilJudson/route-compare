@@ -59,9 +59,9 @@ class RouteCompare:
     def get_route_detail(self, s):
         dic_route_detail = {}
         dic_route_message_reg = {
-            'Type': r'^[CSRMBDOi*]([* ]{1,2}(EX|IA|N1|N2|E1|E2|su|L1|L2|ia]))?',
-            'AD/Metric': r'\[\d*/\d*\]',
-            'Interface': r'((FastEthernet|Ethernet|Serial)\d*/[\d.]*)|Loopback\d*|Port-channel\d*|Vlan\d*|Null0'
+            'Type': re.compile(r'^[LCSRMBDOi]([* ]{1,2}(EX|IA|N1|N2|E1|E2|su|L1|L2|ia]))?'),
+            'AD/Metric': re.compile(r'\[\d*/\d*\]'),
+            'Interface': re.compile(r'((GigabitEthernet|FastEthernet|Ethernet|Serial)\d*[/\d.]*)|(Loopback|Port-channel|Vlan)\d*|Null0')
         }
 
         for j in dic_route_message_reg:
@@ -108,6 +108,7 @@ class RouteCompare:
                             s += '\n ' + j*' '
                 print(s)
         print('\nThese are %d different routes.' % len(set_result_keys))
+        return
 
     @staticmethod
     def show_result_table0(set_result_keys, list_file_name, list_dic_table):
@@ -138,6 +139,7 @@ class RouteCompare:
             f.write('These are %d different routes.\n' % len(set_result_keys))
             f.write(str(pt))
         os.system(result_file_name)
+        return
 
     @staticmethod
     def show_result_table1(set_result_keys, list_file_name, list_dic_table):
@@ -179,6 +181,7 @@ class RouteCompare:
             f.write('These are %d different routes.\n' % len(set_result_keys))
             f.write(str(pt))
         os.system(result_file_name)
+        return
 
 
 if __name__ == '__main__':
@@ -207,3 +210,4 @@ if __name__ == '__main__':
     else:
         print('These two route tables are different.')
         RouteCompare.show_result_table1(RouteCompare.compare_route_table(list_dic_route_table), list_argv, list_dic_route_table)
+    sys.exit()
