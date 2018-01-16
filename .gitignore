@@ -1,2 +1,4 @@
 ignore
 .idea/
+venv(x64)/**/__pycache__/
+venv(x86)/**/__pycache__/
