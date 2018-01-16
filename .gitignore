@@ -1,3 +1,5 @@
 ignore
 .idea/
+venv(x64)/**/__pycache__/
+venv(x86)/**/__pycache__/
 *show+ip+route.txt*
