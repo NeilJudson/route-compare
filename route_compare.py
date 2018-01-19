@@ -59,9 +59,9 @@ class RouteCompare:
     def get_route_detail(self, s):
         dic_route_detail = {}
         dic_route_message_reg = {
-            'Type': r'^[CSRMBDOi*]([* ]{1,2}(EX|IA|N1|N2|E1|E2|su|L1|L2|ia]))?',
-            'AD/Metric': r'\[\d*/\d*\]',
-            'Interface': r'((FastEthernet|Ethernet|Serial)\d*/[\d.]*)|Loopback\d*|Port-channel\d*|Vlan\d*|Null0'
+            'Type': re.compile(r'^[LCSRMBDOi]([* ]{1,2}(EX|IA|N1|N2|E1|E2|su|L1|L2|ia]))?'),
+            'AD/Metric': re.compile(r'\[\d*/\d*\]'),
+            'Interface': re.compile(r'((GigabitEthernet|FastEthernet|Ethernet|Serial)\d*[/\d.]*)|(Loopback|Port-channel|Vlan)\d*|Null0')
         }
 
         for j in dic_route_message_reg:
@@ -103,11 +103,13 @@ class RouteCompare:
                     for l in list_dic_table[n][m]:
                         count += 1
                         for q in list_keys:
-                            s += ' ' + (l.get(q) and l[q] or '')
+                            # s += ' ' + (l.get(q) and l[q] or '')
+                            s += ' ' + (l[q] if l.get(q) else '')
                         if count != length:
                             s += '\n ' + j*' '
                 print(s)
         print('\nThese are %d different routes.' % len(set_result_keys))
+        return
 
     @staticmethod
     def show_result_table0(set_result_keys, list_file_name, list_dic_table):
@@ -125,19 +127,23 @@ class RouteCompare:
                     if m in list_dic_table[n]:
                         count2 = 0
                         for l in list_dic_table[n][m]:
-                            row = [(count1 == 0) and m or '', (count2 == 0) and list_file_name[n] or '']
+                            # row = [(count1 == 0) and m or '', (count2 == 0) and list_file_name[n] or '']
+                            row = [m if count1 == 0 else '', list_file_name[n] if count2 == 0 else '']
                             for q in list_keys:
-                                row += [l.get(q) and l[q] or '']
+                                # row += [l.get(q) and l[q] or '']
+                                row += [l[q] if l.get(q) else '']
                             pt.add_row(row)
                             count1 += 1
                             count2 += 1
                     else:
-                        pt.add_row([(count1 == 0) and m or '', list_file_name[n], '', '', '', ''])
+                        # pt.add_row([(count1 == 0) and m or '', list_file_name[n], '', '', '', ''])
+                        pt.add_row([m if count1 == 0 else '', list_file_name[n], '', '', '', ''])
                         count1 += 1
                 pt.add_row(6*['-'])
             f.write('These are %d different routes.\n' % len(set_result_keys))
             f.write(str(pt))
         os.system(result_file_name)
+        return
 
     @staticmethod
     def show_result_table1(set_result_keys, list_file_name, list_dic_table):
@@ -159,17 +165,21 @@ class RouteCompare:
                         count1 += 1
                         row_list.extend([[]])
                         for q in list_keys:
-                            row_list[count1] += [l.get(q) and l[q] or '']
-                        row_list[count1] += [(count1 == 0) and m or '']
+                            # row_list[count1] += [l.get(q) and l[q] or '']
+                            row_list[count1] += [l[q] if l.get(q) else '']
+                        # row_list[count1] += [(count1 == 0) and m or '']
+                        row_list[count1] += [m if count1 == 0 else '']
                 count2 = -1
                 if m in list_dic_table[1]:
                     for l in list_dic_table[1][m]:
                         count2 += 1
                         if count2 > count1:
                             row_list.extend([[]])
-                            row_list[count2] = ['', '', '', '', (count2 == 0) and m or '']
+                            # row_list[count2] = ['', '', '', '', (count2 == 0) and m or '']
+                            row_list[count2] = ['', '', '', '', m if count2 == 0 else '']
                         for q in list_keys:
-                            row_list[count2] += [l.get(q) and l[q] or '']
+                            # row_list[count2] += [l.get(q) and l[q] or '']
+                            row_list[count2] += [l[q] if l.get(q) else '']
                 while count2 < count1:
                     count2 += 1
                     row_list[count2] += ['', '', '', '']
@@ -179,6 +189,7 @@ class RouteCompare:
             f.write('These are %d different routes.\n' % len(set_result_keys))
             f.write(str(pt))
         os.system(result_file_name)
+        return
 
 
 if __name__ == '__main__':
@@ -207,3 +218,4 @@ if __name__ == '__main__':
     else:
         print('These two route tables are different.')
         RouteCompare.show_result_table1(RouteCompare.compare_route_table(list_dic_route_table), list_argv, list_dic_route_table)
+    sys.exit()
