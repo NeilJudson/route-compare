@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Python 3.6.3
 # Copyright by Neil Judson
-# Revision: 0.8.1 Date: 2018/01/19 17:30:00
+# Revision: 0.8.2 Date: 2018/01/22 23:20:00
 
 import sys
 import os
@@ -61,7 +61,7 @@ class RouteCompare:
         dic_route_message_reg = {
             'Type': re.compile(r'^[LCSRMBDOi]([* ]{1,2}(EX|IA|N1|N2|E1|E2|su|L1|L2|ia]))?'),
             'AD/Metric': re.compile(r'\[\d*/\d*\]'),
-            'Interface': re.compile(r'((GigabitEthernet|FastEthernet|Ethernet|Serial)\d*[/\d.]*)|(Loopback|Port-channel|Vlan)\d*|Null0')
+            'Interface': re.compile(r'((TenGigabitEthernet|GigabitEthernet|FastEthernet|Ethernet|Serial)\d*[/\d.]*)|(Loopback|Port-channel|Vlan)\d*|Null0')
         }
 
         for j in dic_route_message_reg:
