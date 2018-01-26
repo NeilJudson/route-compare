@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Python 3.6.3
 # Copyright by Neil Judson
-# Revision: 0.8.2 Date: 2018/01/22 23:20:00
+# Revision: 0.8.3 Date: 2018/01/22 23:20:00
 
 import sys
 import os
@@ -35,7 +35,7 @@ class RouteCompare:
                         net_mask = re.search(r'/[1-3]?\d', ip.group())
                         if net_mask:
                             s_net_mask = net_mask.group()
-                    elif re.search('^ *\[\d*/\d*\]', s):
+                    elif re.search(r'^ *\[\d*/\d*\]', s):
                         # multipath route
                         dic_route_detail = self.get_route_detail(s)  # analyse route entry
                         type_temp = dic_route_table[s_net_ip][0]['Type']
@@ -60,7 +60,6 @@ class RouteCompare:
         dic_route_detail = {}
         dic_route_message_reg = {
             'Type': re.compile(r'^[LCSRMBDOi]([* ]{1,2}(EX|IA|N1|N2|E1|E2|su|L1|L2|ia]))?'),
-            'AD/Metric': re.compile(r'\[\d*/\d*\]'),
             'Interface': re.compile(r'((TenGigabitEthernet|GigabitEthernet|FastEthernet|Ethernet|Serial)\d*[/\d.]*)|(Loopback|Port-channel|Vlan)\d*|Null0')
         }
 
@@ -68,6 +67,11 @@ class RouteCompare:
             route_message = re.search(dic_route_message_reg[j], s)
             if route_message:
                 dic_route_detail.update({j: route_message.group()})
+        ad_metric0 = re.search(r'\[\d*/\d*\]', s)
+        if ad_metric0:
+            ad_metric = re.search(r'\d*/\d*', ad_metric0.group())
+            if ad_metric:
+                dic_route_detail.update({'AD/Metric': ad_metric.group()})
         next_hop0 = re.search(r'via ' + self.s_ip_reg, s)
         if next_hop0:
             next_hop = re.search(self.ip_reg, next_hop0.group())
