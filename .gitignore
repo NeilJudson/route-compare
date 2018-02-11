@@ -1,0 +1,9 @@
+ignore
+.idea/
+venv(x64)/**/__pycache__/
+venv(x86)/
+IOS/
+NXOS/
+rc-32.bat
+*.log
+*_vs_*
