@@ -1,5 +1,12 @@
 ignore
 .idea/
 venv(x64)/**/__pycache__/
+<<<<<<< HEAD
 venv(x86)/**/__pycache__/
-*show+ip+route.txt*
+venv(x86)/
+IOS/
+NXOS/
+rc-32.bat
+*.log
+*_vs_*
+>>>>>>> develop
