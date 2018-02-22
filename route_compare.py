@@ -125,7 +125,7 @@ class RouteCompare(object):
         return dic_route_table
 
     DIC_ROUTE_MESSAGE_REG_NXOS = {
-        'Type': re.compile(r'(ospf-[\w]*(, type-\d*)?(, tag \d*)?(, intra)?(, inter)?(, discard)?)|(eigrp-[\w]*(, internal)?(, external)?)|static|direct|local|hsrp'),
+        'Type': re.compile(r'(ospf.*)|(eigrp.*)|static|direct|local|hsrp'),
         'Interface': re.compile(r'((Eth)\d*[/\d.:]*)|(Lo|Vlan)\d*|Null0')
     }
 
