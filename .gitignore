@@ -1,7 +1,8 @@
 ignore
 .idea/
-IOS/
-NXOS/
+log/
 rc-32.bat
 *.log
 *_vs_*
+!requirements.txt
+*.txt
