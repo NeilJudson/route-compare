@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Python 3.6.3
 # Copyright by Neil Judson
-# Revision: 0.9.0 Date: 2018/02/22 11:00:00
+# Revision: 0.9.1 Date: 2018/03/6 17:00:00
 
 import sys
 import os
@@ -13,7 +13,7 @@ import prettytable
 
 class RouteCompare(object):
     IP_REG = re.compile(r'((25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)(/[1-3]?\d)?')
-    NEXT_HOP_REG = re.compile(r'via ((25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)')
+    NEXT_HOP_REG = re.compile(r'via (((25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d))')
 
     def read_route_file(self, route_os, file_name):
         if 'IOS' == route_os:
@@ -45,9 +45,7 @@ class RouteCompare(object):
                 if ip:
                     if re.search('is[a-z ]*subnetted', s):
                         # subnetted net
-                        net_mask = re.search(r'/[1-3]?\d', ip.group())
-                        if net_mask:
-                            s_net_mask = net_mask.group()
+                        s_net_mask = ip.group(4) if ip.group(4) else s_net_mask
                     elif re.search(r'^ *\[\d*/\d*\]', s):
                         # multipath route
                         dic_route_detail = self.get_route_detail_ios(s)
@@ -65,7 +63,7 @@ class RouteCompare(object):
                             print(e1)  # 路由表文件此处有问题
                     else:
                         # route
-                        if re.search(r'/[1-3]?\d', ip.group()):
+                        if ip.group(4):
                             s_net_ip = ip.group()
                         else:
                             s_net_ip = ip.group() + s_net_mask
@@ -75,27 +73,19 @@ class RouteCompare(object):
         return dic_route_table
 
     DIC_ROUTE_MESSAGE_REG_IOS = {
-        'Type': re.compile('^[LCSRMBDOi]([* ]{1,2}(EX|IA|N1|N2|E1|E2|su|L1|L2|ia))?'),
-        'Interface': re.compile(r'((TenGigabitEthernet|GigabitEthernet|FastEthernet|Ethernet|Serial)\d*[/\d.:]*)|(Loopback|Port-channel|Vlan)\d*|Null0')
+        'Type': [re.compile('^[LCSRMBDOi]([* ]{1,2}(EX|IA|N1|N2|E1|E2|su|L1|L2|ia))?'), 0],
+        'Interface': [re.compile(r'((TenGigabitEthernet|GigabitEthernet|FastEthernet|Ethernet|Serial)\d*[/\d.:]*)|(Loopback|Port-channel|Vlan)\d*|Null0'), 0],
+        'AD/Metric': [re.compile(r'\[(\d*/\d*)\]'), 1],
+        'NextHop': [NEXT_HOP_REG, 1]
     }
 
     def get_route_detail_ios(self, s):
         dic_route_detail = {}
 
         for j in self.DIC_ROUTE_MESSAGE_REG_IOS:
-            route_message = re.search(self.DIC_ROUTE_MESSAGE_REG_IOS[j], s)
+            route_message = re.search(self.DIC_ROUTE_MESSAGE_REG_IOS[j][0], s)
             if route_message:
-                dic_route_detail.update({j: route_message.group()})
-        ad_metric0 = re.search(r'\[\d*/\d*\]', s)
-        if ad_metric0:
-            ad_metric = re.search(r'\d*/\d*', ad_metric0.group())
-            if ad_metric:
-                dic_route_detail.update({'AD/Metric': ad_metric.group()})
-        next_hop0 = re.search(self.NEXT_HOP_REG, s)
-        if next_hop0:
-            next_hop = re.search(self.IP_REG, next_hop0.group())
-            if next_hop:
-                dic_route_detail.update({'NextHop': next_hop.group()})
+                dic_route_detail.update({j: route_message.group(self.DIC_ROUTE_MESSAGE_REG_IOS[j][1])})
         return dic_route_detail
 
     # ==========================================================================
@@ -125,27 +115,19 @@ class RouteCompare(object):
         return dic_route_table
 
     DIC_ROUTE_MESSAGE_REG_NXOS = {
-        'Type': re.compile(r'(ospf.*)|(eigrp.*)|static|direct|local|hsrp'),
-        'Interface': re.compile(r'((Eth)\d*[/\d.:]*)|(Lo|Vlan)\d*|Null0')
+        'Type': [re.compile(r'(ospf.*)|(eigrp.*)|static|direct|local|hsrp'), 0],
+        'Interface': [re.compile(r'((Eth)\d*[/\d.:]*)|(Lo|Vlan)\d*|Null0'), 0],
+        'AD/Metric': [re.compile(r'\[(\d*/\d*)\]'), 1],
+        'NextHop': [NEXT_HOP_REG, 1]
     }
 
     def get_route_detail_nxos(self, s):
         dic_route_detail = {}
 
         for j in self.DIC_ROUTE_MESSAGE_REG_NXOS:
-            route_message = re.search(self.DIC_ROUTE_MESSAGE_REG_NXOS[j], s)
+            route_message = re.search(self.DIC_ROUTE_MESSAGE_REG_NXOS[j][0], s)
             if route_message:
-                dic_route_detail.update({j: route_message.group()})
-        ad_metric0 = re.search(r'\[\d*/\d*\]', s)
-        if ad_metric0:
-            ad_metric = re.search(r'\d*/\d*', ad_metric0.group())
-            if ad_metric:
-                dic_route_detail.update({'AD/Metric': ad_metric.group()})
-        next_hop0 = re.search(self.NEXT_HOP_REG, s)
-        if next_hop0:
-            next_hop = re.search(self.IP_REG, next_hop0.group())
-            if next_hop:
-                dic_route_detail.update({'NextHop': next_hop.group()})
+                dic_route_detail.update({j: route_message.group(self.DIC_ROUTE_MESSAGE_REG_NXOS[j][1])})
         return dic_route_detail
 
     # ==========================================================================
