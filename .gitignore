@@ -1,7 +1,10 @@
 ignore
 .idea/
-log/
+__pycache__/
+test/log/
+*.pyc
 *.log
-*_vs_*
-!requirements.txt
 *.txt
+!requirements.txt
+*_vs_*
+*.bat

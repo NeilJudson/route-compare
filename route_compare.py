@@ -1,272 +1,330 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Python 3.6.3
-# Copyright by Neil Judson
-# Revision: 0.9.1 Date: 2018/03/6 17:00:00
 
-import sys
 import os
 import re
 import chardet
 import prettytable
+import copy
 
 
-class RouteCompare(object):
-    IP_REG = re.compile(r'((25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)(/[1-3]?\d)?')
-    NEXT_HOP_REG = re.compile(r'via (((25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d))')
-
-    def read_route_file(self, route_os, file_name):
-        if 'IOS' == route_os:
-            return self.read_route_file_ios(file_name)
-        elif 'NXOS' == route_os:
-            return self.read_route_file_nxos(file_name)
-        elif 'H3C' == route_os:
-            pass
-        elif 'HUAWEI' == route_os:
-            pass
-
-    # ==========================================================================
-    # IOS
-    # ==========================================================================
-    def read_route_file_ios(self, file_name):
-        with open(file_name, 'rb') as f:
-            s = f.read()
-            encode_type = chardet.detect(s)['encoding']
-
-        dic_route_table = {}
-
-        with open(file_name, encoding=encode_type) as f:
-            s_net_ip = '0.0.0.0/32'
-            s_net_mask = '/32'
-
-            s = f.readline()
-            while s:
-                ip = re.search(self.IP_REG, s)
-                if ip:
-                    if re.search('is[a-z ]*subnetted', s):
-                        # subnetted net
-                        s_net_mask = ip.group(4) if ip.group(4) else s_net_mask
-                    elif re.search(r'^ *\[\d*/\d*\]', s):
-                        # multipath route
-                        dic_route_detail = self.get_route_detail_ios(s)
-                        try:
-                            type_temp = dic_route_table[s_net_ip][0]['Type']
-                            dic_route_detail.update({'Type': type_temp})
-                            if {'Type': type_temp} == dic_route_table[s_net_ip][0]:
-                                # 针对如下换行的情况：
-                                # O       2.2.2.2
-                                #                 [110/2] via 12.1.1.2, 00:47:24, FastEthernet1/1
-                                dic_route_table[s_net_ip] = [dic_route_detail]
-                            else:
-                                dic_route_table[s_net_ip].append(dic_route_detail)
-                        except Exception as e1:
-                            print(e1)  # 路由表文件此处有问题
-                    else:
-                        # route
-                        if ip.group(4):
-                            s_net_ip = ip.group()
-                        else:
-                            s_net_ip = ip.group() + s_net_mask
-                        dic_route_detail = self.get_route_detail_ios(s)
-                        dic_route_table.update({s_net_ip: [dic_route_detail]})
-                s = f.readline()
-        return dic_route_table
-
-    DIC_ROUTE_MESSAGE_REG_IOS = {
-        'Type': [re.compile('^[LCSRMBDOi]([* ]{1,2}(EX|IA|N1|N2|E1|E2|su|L1|L2|ia))?'), 0],
-        'Interface': [re.compile(r'((TenGigabitEthernet|GigabitEthernet|FastEthernet|Ethernet|Serial)\d*[/\d.:]*)|(Loopback|Port-channel|Vlan)\d*|Null0'), 0],
-        'AD/Metric': [re.compile(r'\[(\d*/\d*)\]'), 1],
-        'NextHop': [NEXT_HOP_REG, 1]
-    }
-
-    def get_route_detail_ios(self, s):
-        dic_route_detail = {}
-
-        for j in self.DIC_ROUTE_MESSAGE_REG_IOS:
-            route_message = re.search(self.DIC_ROUTE_MESSAGE_REG_IOS[j][0], s)
-            if route_message:
-                dic_route_detail.update({j: route_message.group(self.DIC_ROUTE_MESSAGE_REG_IOS[j][1])})
-        return dic_route_detail
-
-    # ==========================================================================
-    # NX-OS
-    # ==========================================================================
-    def read_route_file_nxos(self, file_name):
-        with open(file_name, 'rb') as f:
-            s = f.read()
-            encode_type = chardet.detect(s)['encoding']
-
-        dic_route_table = {}
-
-        with open(file_name, encoding=encode_type) as f:
-            s_net_ip = '0.0.0.0/32'
-
-            s = f.readline()
-            while s:
-                ip = re.search(self.IP_REG, s)
-                if ip:
-                    if re.search('ubest/mbest', s):
-                        s_net_ip = ip.group()
-                        dic_route_table.update({s_net_ip: []})
-                    elif re.search('via', s):
-                        dic_route_detail = self.get_route_detail_nxos(s)
-                        dic_route_table[s_net_ip].append(dic_route_detail)
-                s = f.readline()
-        return dic_route_table
-
-    DIC_ROUTE_MESSAGE_REG_NXOS = {
-        'Type': [re.compile(r'(ospf.*)|(eigrp.*)|static|direct|local|hsrp'), 0],
-        'Interface': [re.compile(r'((Eth)\d*[/\d.:]*)|(Lo|Vlan)\d*|Null0'), 0],
-        'AD/Metric': [re.compile(r'\[(\d*/\d*)\]'), 1],
-        'NextHop': [NEXT_HOP_REG, 1]
-    }
-
-    def get_route_detail_nxos(self, s):
-        dic_route_detail = {}
-
-        for j in self.DIC_ROUTE_MESSAGE_REG_NXOS:
-            route_message = re.search(self.DIC_ROUTE_MESSAGE_REG_NXOS[j][0], s)
-            if route_message:
-                dic_route_detail.update({j: route_message.group(self.DIC_ROUTE_MESSAGE_REG_NXOS[j][1])})
-        return dic_route_detail
-
-    # ==========================================================================
-    # H3C
-    # ==========================================================================
-
-    # ==========================================================================
-    # HUAWEI
-    # ==========================================================================
-
-    @staticmethod
-    def compare_route_table(list_dic_table):
-        list_table_keys = [list_dic_table[0].keys(), list_dic_table[1].keys()]
-        set_table_keys_1_mul_2 = list_table_keys[0] - (list_table_keys[0] - list_table_keys[1])  # keys of table_1 and table_2
-        set_table_keys_1_and_2 = list_table_keys[0] | list_table_keys[1]  # keys of table_1 or table_2
-        for j in set_table_keys_1_mul_2:
-            # delete the same item
-            if list_dic_table[0][j] == list_dic_table[1][j]:
-                set_table_keys_1_and_2.remove(j)
-        return set_table_keys_1_and_2
-    '''
-    @staticmethod
-    def show_result(set_result_keys, list_file_name, list_dic_table):
-        list_keys = ['Type', 'AD/Metric', 'Interface', 'NextHop']
-
-        print('These are %d different routes.' % len(set_result_keys))
-        for m in sorted(set_result_keys):
-            print(64 * '-')
-            print('%-18s' % m)
-            for n in [0, 1]:
-                list_s = [list_file_name[n], ' ']
-                if m in list_dic_table[n]:
-                    count = 0
-                    length = len(list_dic_table[n][m])
-                    j = len(list_file_name[n])
-                    for l in list_dic_table[n][m]:
-                        count += 1
-                        for q in list_keys:
-                            list_s.extend([' ', l[q] if l.get(q) else ''])
-                        if count != length:
-                            list_s.extend(['\n ', j*' '])
-                print(''.join(list_s))
-        print('\nThese are %d different routes.' % len(set_result_keys))
-        return
-
-    @staticmethod
-    def show_result_table0(set_result_keys, list_file_name, list_dic_table):
-        """
-        输出结果表格上下对比
-        """
-        list_keys = ['Type', 'AD/Metric', 'Interface', 'NextHop']
-        pt = prettytable.PrettyTable()
-        pt.field_names = ['Route', 'Table'] + list_keys
-        pt.align = 'l'  # Left align city names
-        result_file_name = '.\\' + list_file_name[0] + '_vs_' + list_file_name[1] + '.txt'
-
-        with open(result_file_name, 'w') as f:
-            for m in sorted(set_result_keys):
-                count1 = 0
-                for n in [0, 1]:
-                    if m in list_dic_table[n]:
-                        count2 = 0
-                        for l in list_dic_table[n][m]:
-                            row = [m if count1 == 0 else '', list_file_name[n] if count2 == 0 else '']
-                            for q in list_keys:
-                                row.append(l[q] if l.get(q) else '')
-                            pt.add_row(row)
-                            count1 += 1
-                            count2 += 1
-                    else:
-                        pt.add_row([m if count1 == 0 else '', list_file_name[n], '', '', '', ''])
-                        count1 += 1
-                pt.add_row(6 * ['-'])
-            f.write('These are %d different routes.\n' % len(set_result_keys))
-            f.write(str(pt))
-        os.system(result_file_name)
-        return
-    '''
-    @staticmethod
-    def show_result_table1(set_result_keys, list_file_name, list_dic_table):
-        """
-        输出结果表格左右对比
-        """
-        list_keys = ['Type', 'AD/Metric', 'Interface', 'NextHop']
-        list_keys0 = ['A Type', 'A AD/Metric', 'A Interface', 'A NextHop']
-        list_keys1 = ['B Type', 'B AD/Metric', 'B Interface', 'B NextHop']
-        pt = prettytable.PrettyTable()
-        pt.field_names = list_keys0 + [list_file_name[0] + ' Route ' + list_file_name[1]] + list_keys1
-        pt.align = 'l'  # Left align city names
-        result_file_name = '.\\' + list_file_name[0] + '_vs_' + list_file_name[1] + '.txt'
-
-        with open(result_file_name, 'w') as f:
-            for m in sorted(set_result_keys):
-                count1 = -1
-                row_list = []
-                if m in list_dic_table[0]:
-                    for l in list_dic_table[0][m]:  # l like {'Type': 'R', 'Interface': 'FastEthernet1/1', 'AD/Metric': '120/1', 'NextHop': '192.168.2.66'}
-                        count1 += 1
-                        row_list.append([])
-                        for q in list_keys:
-                            row_list[count1].append(l[q] if l.get(q) else '')
-                        row_list[count1].append(m if count1 == 0 else '')
-                count2 = -1
-                if m in list_dic_table[1]:
-                    for l in list_dic_table[1][m]:
-                        count2 += 1
-                        if count2 > count1:
-                            row_list.append([])
-                            row_list[count2] = ['', '', '', '', m if count2 == 0 else '']
-                        for q in list_keys:
-                            row_list[count2].append(l[q] if l.get(q) else '')
-                while count2 < count1:
-                    count2 += 1
-                    row_list[count2].extend(['', '', '', ''])
-                for j in range(0, count2+1):
-                    pt.add_row(row_list[j])
-                pt.add_row(9 * ['------'])
-            f.write('These are %d different routes.\n' % len(set_result_keys))
-            f.write(str(pt))
-        os.system(result_file_name)
-        return
+def get_route_table(route_os, file_name):
+    if 'IOS' == route_os:
+        return get_route_table_ios(file_name)
+    elif 'NXOS' == route_os:
+        return get_route_table_nxos(file_name)
+    elif 'H3C' == route_os:
+        pass
+    elif 'HUAWEI' == route_os:
+        pass
 
 
-def main():
-    list_dic_route_table = [{}, {}]
+# ==========================================================================
+# IOS
+# ==========================================================================
+def get_route_table_ios(file_name):
+    """Get route table.
 
-    rc = RouteCompare()
-    list_dic_route_table[0] = rc.read_route_file(sys.argv[3], sys.argv[1])
-    list_dic_route_table[1] = rc.read_route_file(sys.argv[3], sys.argv[2])
-    # for i in dic_route_table_1:
-    #     print('%-18s' % i + ' ', dic_route_table_1[i])
-    # print([(k,  dic_route_table_1[k]) for k in sorted(dic_route_table_1.keys())])  # sort
-    if list_dic_route_table[0] == list_dic_route_table[1]:
+    :return:
+        dict route_table: A dict of route table. For example:
+            {
+                "192.168.0.0/24": {  # route
+                    "192.168.1.1": {  # NextHop
+                        "Interface": "TenGigabitEthernet1/1",
+                        "AD/Metric": "90/1024",
+                        "Type": "D"
+                    }
+                }
+            }
+    """
+
+    with open(file_name, 'rb') as f:
+        s = f.read()
+        encode_type = chardet.detect(s)['encoding']
+    with open(file_name, encoding=encode_type) as f:
+        s = f.read()
+
+    route_entry_reg = re.compile(
+        r'(([LCSRMBDOi]([* ]{1,2}(EX|IA|N1|N2|E1|E2|su|L1|L2|ia))?) +([\d.]+/\d+)\s+'
+        r'((is directly connected|is a summary|\[(\d+/\d+)\] via ([\d.]+)).+'
+        r', ((FortyGigabitEthernet|TenGigabitEthernet|GigabitEthernet|FastEthernet|Ethernet|Serial|Loopback|Port-channel|Vlan|Null)[\d/.:]+)\s*)+)'
+    )
+
+    path_entry_reg = re.compile(
+        r'((is directly connected|is a summary|\[(\d+/\d+)\] via ([\d.]+)).+'
+        r', ((FortyGigabitEthernet|TenGigabitEthernet|GigabitEthernet|FastEthernet|Ethernet|Serial|Loopback|Port-channel|Vlan|Null)[\d/.:]+))'
+    )
+    route_table = {}
+
+    result = re.findall(route_entry_reg, s)
+    if result:
+        for m in result:
+            type = m[1]
+            route = m[4]
+            result1 = re.findall(path_entry_reg, m[0])
+            path = {}
+            for n in result1:
+                nexthop = n[3]
+                if nexthop:
+                    pass
+                else:
+                    nexthop = n[1]
+                path.update({nexthop: {'Interface': n[5], 'AD/Metric': n[2], 'Type': type}})
+            route_table.update({route: path})
+        return route_table
+    else:
+        raise Exception('Unexpected file: {}'.format(file_name))
+
+
+# ==========================================================================
+# NX-OS
+# ==========================================================================
+def get_route_table_nxos(file_name):
+    """Get route table.
+
+    :return:
+        dict route_table: A dict of route table. For example:
+            {
+                "192.168.0.0/24": {  # route
+                    "192.168.1.1": {  # NextHop
+                        "Interface": "Eth3/9",
+                        "AD/Metric": "90/1024",
+                        "Type": "eigrp-eigrp-core, external, tag 3"
+                    }
+                }
+            }
+    """
+
+    with open(file_name, 'rb') as f:
+        s = f.read()
+        encode_type = chardet.detect(s)['encoding']
+    with open(file_name, encoding=encode_type) as f:
+        s = f.read()
+
+    route_entry_reg = re.compile(
+        r'(([\d.]+/\d+).+\s+'
+        r'(.+via ([\d.]*)[, ]*((Te|Gi|Fa|Eth|Lo|Vlan|Po|Null)[\d/.:]+), \[(\d*/\d*)\].+, ((ospf|eigrp|static|direct|local|hsrp).*)\s*)+)'
+    )
+    path_entry_reg = re.compile(
+        r'(.+via ([\d.]*)[, ]*((Te|Gi|Fa|Eth|Lo|Vlan|Po|Null)[\d/.:]+), \[(\d*/\d*)\].+, ((ospf|eigrp|static|direct|local|hsrp).*)\s*)'
+    )
+    route_table = {}
+
+    result = re.findall(route_entry_reg, s)
+    if result:
+        for m in result:
+            route = m[1]
+            result1 = re.findall(path_entry_reg, m[0])
+            path = {}
+            for n in result1:
+                path.update({n[1]: {'Interface': n[2], 'AD/Metric': n[4], 'Type': n[5]}})
+            route_table.update({route: path})
+        return route_table
+    else:
+        raise Exception('Unexpected file: {}'.format(file_name))
+
+
+# ==========================================================================
+# H3C
+# ==========================================================================
+
+
+# ==========================================================================
+# HUAWEI
+# ==========================================================================
+
+
+def compare_route_table(route_table_old, route_table_new):
+    if route_table_old == route_table_new:
         print('These two route tables are the same.')
+        return {}
     else:
         print('These two route tables are different.')
-        RouteCompare.show_result_table1(RouteCompare.compare_route_table(list_dic_route_table), [sys.argv[1], sys.argv[2]], list_dic_route_table)
-    sys.exit()
+
+    result_add = {}
+    result_del = {}
+    result_edit = {}
+
+    route_table_old_keys = route_table_old.keys()
+    route_table_new_keys = route_table_new.keys()
+    route_table_add_keys = route_table_new_keys - route_table_old_keys
+    route_table_del_keys = route_table_old_keys - route_table_new_keys
+    route_table_mul_keys = route_table_old_keys & route_table_new_keys
+    route_table_edit_keys = copy.copy(route_table_mul_keys)
+    for route in route_table_mul_keys:
+        # delete the same item
+        if route_table_old[route] == route_table_new[route]:
+            route_table_edit_keys.remove(route)
+
+    for route in route_table_add_keys:
+        result_add.update({
+            route: [
+                {
+                    'Old NextHop': '', 'Old AD/Metric': '', 'Old Interface': '', 'Old Type': '',
+                    'New NextHop': nexthop,
+                    'New AD/Metric': route_table_new[route][nexthop]['AD/Metric'],
+                    'New Interface': route_table_new[route][nexthop]['Interface'],
+                    'New Type': route_table_new[route][nexthop]['Type']
+                } for nexthop in route_table_new[route]
+            ]
+        })
+
+    for route in route_table_del_keys:
+        result_del.update({
+            route: [
+                {
+                    'Old NextHop': nexthop,
+                    'Old AD/Metric': route_table_old[route][nexthop]['AD/Metric'],
+                    'Old Interface': route_table_old[route][nexthop]['Interface'],
+                    'Old Type': route_table_old[route][nexthop]['Type'],
+                    'New NextHop': '', 'New AD/Metric': '', 'New Interface': '', 'New Type': ''
+                } for nexthop in route_table_old[route]
+            ]
+        })
+
+    for route in route_table_edit_keys:
+        l = []
+        for nexthop in route_table_new[route]:
+            if nexthop in route_table_old[route]:
+                l.append({
+                    'Old NextHop': nexthop,
+                    'Old AD/Metric': route_table_old[route][nexthop]['AD/Metric'],
+                    'Old Interface': route_table_old[route][nexthop]['Interface'],
+                    'Old Type': route_table_old[route][nexthop]['Type'],
+                    'New NextHop': nexthop,
+                    'New AD/Metric': route_table_new[route][nexthop]['AD/Metric'],
+                    'New Interface': route_table_new[route][nexthop]['Interface'],
+                    'New Type': route_table_new[route][nexthop]['Type']
+                })
+            else:
+                l.append({
+                    'Old NextHop': '', 'Old AD/Metric': '', 'Old Interface': '', 'Old Type': '',
+                    'New NextHop': nexthop,
+                    'New AD/Metric': route_table_new[route][nexthop]['AD/Metric'],
+                    'New Interface': route_table_new[route][nexthop]['Interface'],
+                    'New Type': route_table_new[route][nexthop]['Type']
+                })
+        for nexthop in route_table_old[route].keys() - route_table_new[route].keys():
+            l.append({
+                'Old NextHop': nexthop,
+                'Old AD/Metric': route_table_old[route][nexthop]['AD/Metric'],
+                'Old Interface': route_table_old[route][nexthop]['Interface'],
+                'Old Type': route_table_old[route][nexthop]['Type'],
+                'New NextHop': '', 'New AD/Metric': '', 'New Interface': '', 'New Type': ''
+            })
+        result_edit.update({route: l})
+
+    return {'add': result_add, 'del': result_del, 'edit': result_edit}
 
 
-if __name__ == '__main__':
-    main()
+def show_result_table(result, file_name_old, file_name_new):
+    """用prettytable展现对比结果
+
+    :param result:
+    :param file_name_old:
+    :param file_name_new:
+    :return:
+    """
+
+    result_add = result['add']
+    result_del = result['del']
+    result_edit = result['edit']
+
+    list_keys1 = ['Old Type', 'Old AD/Metric', 'Old Interface', 'Old NextHop']
+    list_keys2 = ['New Type', 'New AD/Metric', 'New Interface', 'New NextHop']
+    pt = prettytable.PrettyTable()
+    pt.field_names = list_keys1 + [file_name_old + ' Route ' + file_name_new] + list_keys2
+    pt.align = 'l'  # Left align city names
+    result_file_name = '.\\' + file_name_old + '_vs_' + file_name_new + '.txt'
+
+    pt.add_row(['新增', '', '', '', '', '', '', '', ''])
+    pt.add_row(9 * ['------'])
+    for route in sorted(result_add.keys()):
+        for i in result_add[route]:
+            pt.add_row([i[x] for x in list_keys1] + [route] + [i[y] for y in list_keys2])
+        pt.add_row(9 * ['------'])
+
+    pt.add_row(['删除', '', '', '', '', '', '', '', ''])
+    pt.add_row(9 * ['------'])
+    for route in sorted(result_del.keys()):
+        for i in result_del[route]:
+            pt.add_row([i[x] for x in list_keys1] + [route] + [i[y] for y in list_keys2])
+        pt.add_row(9 * ['------'])
+
+    pt.add_row(['修改', '', '', '', '', '', '', '', ''])
+    pt.add_row(9 * ['------'])
+    for route in sorted(result_edit.keys()):
+        for i in result_edit[route]:
+            pt.add_row([i[x] for x in list_keys1] + [route] + [i[y] for y in list_keys2])
+        pt.add_row(9 * ['------'])
+
+    with open(result_file_name, 'w') as f:
+        f.write(str(pt))
+    os.system(result_file_name)
+
+    return
+
+
+def result_to_web(result):
+    """对比结果转换成web接口数据格式
+
+    :param result:
+    :return:
+    """
+
+    result_add = result['add']
+    result_del = result['del']
+    result_edit = result['edit']
+
+    items_add = []
+    items_del = []
+    items_edit = []
+
+    for route in result_add:
+        key = route
+        for l in result_add[route]:
+            items_add.append({
+                'Old_Type': l['Old Type'],
+                'Old_AD_Metric': l['Old AD/Metric'],
+                'Old_Interface': l['Old Interface'],
+                'Old_NextHop': l['Old NextHop'],
+                'key': key,
+                'New_Type': l['New Type'],
+                'New_AD_Metric': l['New AD/Metric'],
+                'New_Interface': l['New Interface'],
+                'New_NextHop': l['New NextHop']
+            })
+            key = ''
+
+    for route in result_del:
+        key = route
+        for l in result_del[route]:
+            items_del.append({
+                'Old_Type': l['Old Type'],
+                'Old_AD_Metric': l['Old AD/Metric'],
+                'Old_Interface': l['Old Interface'],
+                'Old_NextHop': l['Old NextHop'],
+                'key': key,
+                'New_Type': l['New Type'],
+                'New_AD_Metric': l['New AD/Metric'],
+                'New_Interface': l['New Interface'],
+                'New_NextHop': l['New NextHop']
+            })
+            key = ''
+
+    for route in result_edit:
+        key = route
+        for l in result_edit[route]:
+            items_edit.append({
+                'Old_Type': l['Old Type'],
+                'Old_AD_Metric': l['Old AD/Metric'],
+                'Old_Interface': l['Old Interface'],
+                'Old_NextHop': l['Old NextHop'],
+                'key': key,
+                'New_Type': l['New Type'],
+                'New_AD_Metric': l['New AD/Metric'],
+                'New_Interface': l['New Interface'],
+                'New_NextHop': l['New NextHop']
+            })
+            key = ''
+
+    return {'items_add': items_add, 'items_del': items_del, 'items_edit': items_edit}
