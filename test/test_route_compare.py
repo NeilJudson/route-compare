@@ -23,7 +23,7 @@ def main():
         route_table_new = get_route_table(route_os, file_name_new)
     except Exception as e:
         print(e)
-        return
+        sys.exit()
     result = compare_route_table(route_table_old, route_table_new)
     show_result_table(result, file_name_old, file_name_new)
     print(result_to_web(result))

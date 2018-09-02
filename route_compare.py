@@ -14,9 +14,9 @@ def get_route_table(route_os, file_name):
     elif 'NXOS' == route_os:
         return get_route_table_nxos(file_name)
     elif 'H3C' == route_os:
-        pass
+        return
     elif 'HUAWEI' == route_os:
-        pass
+        return
 
 
 # ==========================================================================
@@ -74,6 +74,7 @@ def get_route_table_ios(file_name):
         return route_table
     else:
         raise Exception('Unexpected file: {}'.format(file_name))
+        return
 
 
 # ==========================================================================
@@ -122,6 +123,7 @@ def get_route_table_nxos(file_name):
         return route_table
     else:
         raise Exception('Unexpected file: {}'.format(file_name))
+        return
 
 
 # ==========================================================================
