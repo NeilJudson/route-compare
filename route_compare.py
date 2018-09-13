@@ -69,12 +69,11 @@ def get_route_table_ios(file_name):
                     pass
                 else:
                     nexthop = n[1]
-                path.update({nexthop: {'Interface': n[5], 'AD/Metric': n[2], 'Type': type}})
+                path.update({nexthop: {'Interface': n[4], 'AD/Metric': n[2], 'Type': type}})
             route_table.update({route: path})
         return route_table
     else:
         raise Exception('Unexpected file: {}'.format(file_name))
-        return
 
 
 # ==========================================================================
@@ -123,7 +122,6 @@ def get_route_table_nxos(file_name):
         return route_table
     else:
         raise Exception('Unexpected file: {}'.format(file_name))
-        return
 
 
 # ==========================================================================
