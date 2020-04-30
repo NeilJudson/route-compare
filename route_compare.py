@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-# Python 3.6
 
+import copy
 import os
 import re
+
 import chardet
 import prettytable
-import copy
 
 
 def get_route_table(route_os, file_name):
@@ -45,22 +45,22 @@ def get_route_table_ios(file_name):
         s = f.read()
 
     route_entry_reg = re.compile(
-        r'(([LCSRMBDOi]([* ]{1,2}(EX|IA|N1|N2|E1|E2|su|L1|L2|ia))?) +([\d.]+/\d+)\s+'
-        r'((is directly connected|is a summary|\[(\d+/\d+)\] via ([\d.]+)).+'
-        r', ((FortyGigabitEthernet|TenGigabitEthernet|GigabitEthernet|FastEthernet|Ethernet|Serial|Loopback|Port-channel|Vlan|Null)[\d/.:]+)\s*)+)'
+        r'(([LCSRMBDOi](?:[* ]{1,2}(?:EX|IA|N1|N2|E1|E2|su|L1|L2|ia))?) +([\d.]+(?:/\d+)?)\s+'
+        r'(?:(?:is directly connected|is a summary|\[\d+/\d+\] via [\d.]+).+\s*)+)'
     )
 
     path_entry_reg = re.compile(
-        r'((is directly connected|is a summary|\[(\d+/\d+)\] via ([\d.]+)).+'
-        r', ((FortyGigabitEthernet|TenGigabitEthernet|GigabitEthernet|FastEthernet|Ethernet|Serial|Loopback|Port-channel|Vlan|Null)[\d/.:]+))'
+        r'((is directly connected|is a summary|\[(\d+/\d+)\] via ([\d.]+)).+?'
+        r'((?:Hu|Fo|Te|Gi|Fa|Eth|Se|Lo|Po|Vlan|Null)\D*[\d/.:]+)?\s*)'
     )
+
     route_table = {}
 
     result = re.findall(route_entry_reg, s)
     if result:
         for m in result:
             type = m[1]
-            route = m[4]
+            route = m[2]
             result1 = re.findall(path_entry_reg, m[0])
             path = {}
             for n in result1:
@@ -103,11 +103,12 @@ def get_route_table_nxos(file_name):
 
     route_entry_reg = re.compile(
         r'(([\d.]+/\d+).+\s+'
-        r'(.+via ([\d.]*)[, ]*((Te|Gi|Fa|Eth|Lo|Vlan|Po|Null)[\d/.:]+), \[(\d*/\d*)\].+, ((ospf|eigrp|static|direct|local|hsrp).*)\s*)+)'
+        r'(.+via (?:[\d.]+, )?(?:Te|Gi|Fa|Eth|Lo|Vlan|Po|Null)\D*[\d/.:]+, \[\d+/\d+\].+\s*)+)'
     )
     path_entry_reg = re.compile(
-        r'(.+via ([\d.]*)[, ]*((Te|Gi|Fa|Eth|Lo|Vlan|Po|Null)[\d/.:]+), \[(\d*/\d*)\].+, ((ospf|eigrp|static|direct|local|hsrp).*)\s*)'
+        r'(.+via (?:([\d.]+), )?((?:Te|Gi|Fa|Eth|Lo|Vlan|Po|Null)\D*[\d/.:]+), \[(\d+/\d+)\].+((?:ospf|eigrp|static|direct|local|hsrp).*?)\s*)'
     )
+
     route_table = {}
 
     result = re.findall(route_entry_reg, s)
@@ -117,7 +118,7 @@ def get_route_table_nxos(file_name):
             result1 = re.findall(path_entry_reg, m[0])
             path = {}
             for n in result1:
-                path.update({n[1]: {'Interface': n[2], 'AD/Metric': n[4], 'Type': n[5]}})
+                path.update({n[1]: {'Interface': n[2], 'AD/Metric': n[3], 'Type': n[4]}})
             route_table.update({route: path})
         return route_table
     else:
@@ -135,6 +136,11 @@ def get_route_table_nxos(file_name):
 
 
 def compare_route_table(route_table_old, route_table_new):
+    """比较两个格式化后的日志结果
+    :param route_table_old:
+    :param route_table_new:
+    :return:
+    """
     if route_table_old == route_table_new:
         print('These two route tables are the same.')
         return {}
@@ -147,9 +153,11 @@ def compare_route_table(route_table_old, route_table_new):
 
     route_table_old_keys = route_table_old.keys()
     route_table_new_keys = route_table_new.keys()
+
     route_table_add_keys = route_table_new_keys - route_table_old_keys
     route_table_del_keys = route_table_old_keys - route_table_new_keys
     route_table_mul_keys = route_table_old_keys & route_table_new_keys
+
     route_table_edit_keys = copy.copy(route_table_mul_keys)
     for route in route_table_mul_keys:
         # delete the same item
@@ -329,3 +337,15 @@ def result_to_web(result):
             key = ''
 
     return {'items_add': items_add, 'items_del': items_del, 'items_edit': items_edit}
+
+
+# if __name__ == '__main__':
+#     path = '/Users/fanhaimu/workspace/py_api/RouteCompare/doc/test/NXOS/'
+#     file1 = 'show_ip_route_AF.txt'
+#     file2 = 'show_ip_route_BF.txt'
+#     route_os = 'NXOS'
+#
+#     route_table_old = get_route_table(route_os, path + file1)
+#     route_table_new = get_route_table(route_os, path + file2)
+#     result = compare_route_table(route_table_old, route_table_new)
+#     print(result_to_web(result))
