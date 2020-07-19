@@ -50,7 +50,7 @@ def get_route_table_ios(file_name):
     )
 
     path_entry_reg = re.compile(
-        r'((is directly connected|is a summary|\[(\d+/\d+)\] via ([\d.]+)).+?'
+        r'((is directly connected|is a summary|\[(\d+/\d+)\] via ([\d.]+)).+?, '
         r'((?:Hu|Fo|Te|Gi|Fa|Eth|Se|Lo|Po|Vlan|Null)\D*[\d/.:]+)?\s*)'
     )
 
@@ -128,7 +128,14 @@ def get_route_table_nxos(file_name):
 # ==========================================================================
 # H3C
 # ==========================================================================
+def test(a,b):
+    """
 
+    :param a:
+    :param b:
+    :return:
+    """
+    return a+b
 
 # ==========================================================================
 # HUAWEI
@@ -176,6 +183,7 @@ def compare_route_table(route_table_old, route_table_new):
                 } for nexthop in route_table_new[route]
             ]
         })
+    result_add = dict(sorted(result_add.items(), key=lambda item: list(route_table_new_keys).index(item[0])))
 
     for route in route_table_del_keys:
         result_del.update({
@@ -189,6 +197,7 @@ def compare_route_table(route_table_old, route_table_new):
                 } for nexthop in route_table_old[route]
             ]
         })
+    result_del = dict(sorted(result_del.items(), key=lambda item: list(route_table_old_keys).index(item[0])))
 
     for route in route_table_edit_keys:
         l = []
@@ -221,6 +230,7 @@ def compare_route_table(route_table_old, route_table_new):
                 'New NextHop': '', 'New AD/Metric': '', 'New Interface': '', 'New Type': ''
             })
         result_edit.update({route: l})
+    result_edit = dict(sorted(result_edit.items(), key=lambda item: list(route_table_old_keys).index(item[0])))
 
     return {'add': result_add, 'del': result_del, 'edit': result_edit}
 
@@ -337,7 +347,6 @@ def result_to_web(result):
             key = ''
 
     return {'items_add': items_add, 'items_del': items_del, 'items_edit': items_edit}
-
 
 # if __name__ == '__main__':
 #     path = '/Users/fanhaimu/workspace/py_api/RouteCompare/doc/test/NXOS/'
